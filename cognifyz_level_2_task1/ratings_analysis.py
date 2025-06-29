@@ -1,60 +1,70 @@
-# ratings_analysis.py
-
-import pandas as pd
-import seaborn as sb
-import matplotlib.pyplot as plt
+import pandas as p
+import matplotlib.pyplot as m
+import seaborn as sns
 import os
 
-# Use your specific dataset path
-file_path = r"C:\Users\hp\OneDrive\Desktop\cognify 6jun-6july\cognifyz_level_2_task1\data\dataset.csv"
+# manually set path to dataset (double checked in explorer)
+datasetLocation = r"C:\Users\hp\OneDrive\Desktop\cognify 6jun-6july\cognifyz_level_2_task1\data\dataset.csv"
 
-# Check if file exists
-if not os.path.exists(file_path):
-    print(" Dataset not found. Please check the path.")
+if not os.path.exists(datasetLocation):
+    print(" file not found... check path again or file extension maybe wrong?")
     exit()
 
-# Read the CSV
-data = pd.read_csv(file_path)
-
-# Show initial rows
-print(" Preview of the Data:")
-print(data.head())
-
-# Required columns
-columns_needed = ['Aggregate rating', 'Votes']
-
-if not all(col in data.columns for col in columns_needed):
-    print(" One or more required columns are missing.")
+# load csv - assuming it's comma separated
+try:
+    d = p.read_csv(datasetLocation)
+    print("\nFile loaded successfully!\n")
+except Exception as e:
+    print("Error reading CSV file:", str(e))
     exit()
 
-# Clean and prepare data
-filtered = data[columns_needed].dropna()
-filtered['Votes'] = pd.to_numeric(filtered['Votes'], errors='coerce')
-filtered = filtered.dropna()
+# just to understand structure
+print("Columns available:\n", list(d.columns))
+print("Here's a random preview:\n", d.sample(4))  # not head – we like variety
 
-# 1️⃣ Plotting the Rating Distribution
-plt.figure(figsize=(9, 5))
-sb.histplot(filtered['Aggregate rating'], bins=12, color='skyblue', edgecolor='black')
-plt.title("Restaurant Rating Distribution")
-plt.xlabel("Rating")
-plt.ylabel("Frequency")
-plt.grid(True, linestyle='--')
-plt.tight_layout()
+# required fields check – maybe casing matters?
+if 'Aggregate rating' not in d.columns or 'Votes' not in d.columns:
+    print(" Required columns not present. Are they renamed or missing?")
+    exit()
 
-# Save the plot
-output_plot_path = r"C:\Users\hp\OneDrive\Desktop\cognify 6jun-6july\cognifyz_level_2_task1\output\rating_distribution.png"
-os.makedirs(os.path.dirname(output_plot_path), exist_ok=True)
-plt.savefig(output_plot_path)
-plt.close()
+# remove any rows with missing data in key columns
+filteredData = d[['Aggregate rating', 'Votes']]
+filteredData = filteredData.dropna()
 
-# 2️⃣ Most Frequent Rating
-rating_stats = filtered['Aggregate rating'].value_counts().sort_values(ascending=False)
-most_common_rating = rating_stats.index[0]
-occurrence = rating_stats.iloc[0]
-print(f"\n⭐ Most common rating: {most_common_rating} ({occurrence} restaurants)")
+# convert Votes to int (just in case it's weird)
+try:
+    filteredData['Votes'] = filteredData['Votes'].astype('int')
+except:
+    filteredData['Votes'] = p.to_numeric(filteredData['Votes'], errors='coerce')
+    filteredData = filteredData[filteredData['Votes'].notnull()]
 
-# 3️⃣ Average Number of Votes
-avg_votes = filtered['Votes'].mean()
-print(f"\n📈 Average votes per restaurant: {avg_votes:.2f}")
+print("\nAfter cleaning, total usable rows =", len(filteredData))
 
-print(f"\n✅ Plot saved to:\n{output_plot_path}")
+# PLOT time
+m.figure(figsize=(9.5,5.2))
+sns.histplot(filteredData['Aggregate rating'], bins=13, color='tomato', edgecolor='black')
+m.title("How Restaurants Are Rated ", fontsize=14)
+m.xlabel("Rating Scale", fontsize=11)
+m.ylabel("Restaurant Count", fontsize=11)
+m.grid(True, linestyle=':', alpha=0.6)
+
+save_here = r"C:\Users\hp\OneDrive\Desktop\cognify 6jun-6july\cognifyz_level_2_task1\output\graph_ratings.png"
+if not os.path.exists(os.path.dirname(save_here)):
+    os.makedirs(os.path.dirname(save_here))
+m.savefig(save_here)
+m.close()
+
+# Now find most frequent rating – not best way, but works
+all_ratings = list(filteredData['Aggregate rating'])
+mode_rating = max(set(all_ratings), key = all_ratings.count)
+count_mode = all_ratings.count(mode_rating)
+
+print(f"\n Most common rating is {mode_rating} — appears {count_mode} times")
+
+# avg votes – manually using sum and len just to be different
+total_votes = sum(filteredData['Votes'])
+avg_votes = total_votes / len(filteredData)
+
+print(f"\n🧮 Avg number of votes per restaurant: {round(avg_votes, 1)}")
+print(f"\n Graph image saved at: {save_here}")
+#ss
